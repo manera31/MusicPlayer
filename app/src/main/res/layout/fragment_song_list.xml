@@ -5,7 +5,7 @@
 
     <fragment
         android:id="@+id/FrgSongList"
-        android:name="com.joanmanera.reproductormusica.FragmentSongList"
+        android:name="com.joanmanera.reproductormusica.Fragments.FragmentSongList"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 </LinearLayout>

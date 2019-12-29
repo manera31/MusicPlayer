@@ -1,4 +1,4 @@
-package com.joanmanera.reproductormusica;
+package com.joanmanera.reproductormusica.Adapters;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,6 +7,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.joanmanera.reproductormusica.Models.Song;
+import com.joanmanera.reproductormusica.R;
 
 import java.util.ArrayList;
 

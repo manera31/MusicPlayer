@@ -1,5 +1,6 @@
-package com.joanmanera.reproductormusica;
+package com.joanmanera.reproductormusica.Activities;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -18,14 +19,12 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.MediaStore;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +33,11 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
+import com.joanmanera.reproductormusica.Models.Song;
+import com.joanmanera.reproductormusica.Services.MusicService;
+import com.joanmanera.reproductormusica.R;
 
 public class MainActivity extends Activity implements View.OnClickListener, IChangeSongListener {
 
@@ -44,23 +48,16 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
     private boolean appPaused =false, playbackPaused=false;
 
-    private ImageButton ibShuffle;
-    private ImageButton ibPrevious;
-    private ImageButton ibPlayPause;
-    private ImageButton ibNext;
-    private ImageButton ibRepeatRepeatOne;
-    private ImageButton ibAddList;
-    private ImageButton ibList, ibQueueList;
+    private ImageButton ibShuffle, ibPrevious, ibPlayPause, ibNext, ibRepeatRepeatOne, ibAddList, ibList, ibQueueList;
     private SeekBar sbProgreso;
-    private boolean isShuffle = false;
-    private boolean isRepeat = false;
-    private boolean isRepeatOne = false;
-    private boolean isPaused = true;
+    private boolean isShuffle = false, isRepeat = false, isRepeatOne = false, isPaused = true;
+
     private ScheduledExecutorService scheduler;
     private TextView tvNombreCancion, tvTiempoRestante;
     private Spinner spinner;
 
 
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -201,7 +198,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         list.add("string3");
         list.add("[Select one]");
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, list);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, list);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
 
@@ -247,9 +244,6 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
                 String thisDuration = musicCursor.getString(durationColumn);
                 long thisDurationLong = musicCursor.getLong(durationColumn);
 
-
-
-
                 String duration;
                 if(String.valueOf(thisDuration) != null) {
                     try {
@@ -276,8 +270,13 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
                 songList.add(new Song(thisId, thisTitle, thisArtist, duration, thisDurationLong));
             }
+
             while (musicCursor.moveToNext());
         }
+        if(musicCursor != null){
+            musicCursor.close();
+        }
+
     }
 
     private void playNext(){

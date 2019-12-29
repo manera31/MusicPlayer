@@ -1,8 +1,5 @@
-package com.joanmanera.reproductormusica;
+package com.joanmanera.reproductormusica.Services;
 
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ContentUris;
 import android.content.Intent;
@@ -18,13 +15,13 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
+import com.joanmanera.reproductormusica.Models.Song;
+
 import java.util.ArrayList;
 import java.util.Random;
 
 public class MusicService extends Service implements MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
-
-    private String songTitle="";
-    private static final int NOTIFY_ID = 1;
 
     private MediaPlayer player;
     private ArrayList<Song> songs;
@@ -70,7 +67,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     public void playSong(){
         player.reset();
         Song playSong = songs.get(songPosn);
-        songTitle = playSong.getTitle();
         long currSong = playSong.getId();
         Uri trackUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, currSong);
 
@@ -162,7 +158,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     }
 
     public class MusicBinder extends Binder {
-        MusicService getService() {
+        public MusicService getService() {
             return MusicService.this;
         }
     }

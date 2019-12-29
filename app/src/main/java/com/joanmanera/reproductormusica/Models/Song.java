@@ -1,4 +1,4 @@
-package com.joanmanera.reproductormusica;
+package com.joanmanera.reproductormusica.Models;
 
 import android.net.Uri;
 

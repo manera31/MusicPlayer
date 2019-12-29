@@ -1,4 +1,4 @@
-package com.joanmanera.reproductormusica;
+package com.joanmanera.reproductormusica.Activities;
 
 
 import android.app.Activity;
@@ -8,6 +8,11 @@ import android.os.Bundle;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.joanmanera.reproductormusica.Fragments.FragmentSongList;
+import com.joanmanera.reproductormusica.Interfaces.IPickSongListener;
+import com.joanmanera.reproductormusica.Models.Song;
+import com.joanmanera.reproductormusica.R;
 
 import java.util.ArrayList;
 
