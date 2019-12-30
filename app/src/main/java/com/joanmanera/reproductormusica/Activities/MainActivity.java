@@ -8,11 +8,14 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -34,6 +37,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.joanmanera.reproductormusica.DataBase.AdminSQLiteOpenHelper;
 import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
 import com.joanmanera.reproductormusica.Models.Song;
 import com.joanmanera.reproductormusica.Services.MusicService;
@@ -82,6 +86,54 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         queueList.add(songList.get(1));
     }
 
+    private ArrayList<Song> getSongsFromDatabase() {
+        AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper(this, "MusicPlayer", null, 1);
+        SQLiteDatabase database = admin.getWritableDatabase();
+        ArrayList<Song> songs = new ArrayList<>();
+
+        Cursor querySongs = database.rawQuery("select * from songs", null);
+
+        for (int i = 0 ; i < querySongs.getCount() ; i++) {
+            long id = querySongs.getLong(0);
+            String title = querySongs.getString(1);
+            String artist = querySongs.getString(2);
+            String durationString = querySongs.getString(3);
+            long durationLong = querySongs.getLong(4);
+            String nameList = querySongs.getString(5);
+
+            songs.add(new Song(id, title, artist, durationString, durationLong, nameList));
+        }
+
+        querySongs.close();
+        database.close();
+
+        return songs;
+    }
+
+    private void addSongToDatabase(Song song){
+        AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper(this, "MusicPlayer", null, 1);
+        SQLiteDatabase database = admin.getWritableDatabase();
+
+        long id = song.getId();
+        String title = song.getTitle();
+        String artist = song.getArtist();
+        String durationString = song.getDuration();
+        long durationLong = song.getDurationLong();
+        String nameList = song.getNameList();
+
+        ContentValues newCamp = new ContentValues();
+        newCamp.put("id", id);
+        newCamp.put("title", title);
+        newCamp.put("artist", artist);
+        newCamp.put("durationString", durationString);
+        newCamp.put("durationLong", durationLong);
+        newCamp.put("nameList", nameList);
+
+        database.insert("songs", null, newCamp);
+
+        database.close();
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -90,14 +142,12 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
             bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
             startService(playIntent);
         }
-        Toast.makeText(this, "Start", Toast.LENGTH_LONG).show();
     }
 
     @Override
     protected void onDestroy() {
         stopService(playIntent);
         musicSrv=null;
-        Toast.makeText(this, "Destroy", Toast.LENGTH_LONG).show();
         super.onDestroy();
     }
 
@@ -105,7 +155,6 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     protected void onPause(){
         super.onPause();
         appPaused =true;
-        Toast.makeText(this, "Pause", Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -114,12 +163,10 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         if(appPaused){
             appPaused =false;
         }
-        Toast.makeText(this, "Resume", Toast.LENGTH_LONG).show();
     }
 
     @Override
     protected void onStop() {
-        Toast.makeText(this, "Stop", Toast.LENGTH_LONG).show();
         super.onStop();
     }
 

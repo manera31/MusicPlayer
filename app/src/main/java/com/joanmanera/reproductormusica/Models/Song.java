@@ -11,6 +11,7 @@ public class Song implements Serializable {
     private String artist;
     private String duration;
     private long durationLong;
+    private String nameList;
     private Uri portada;
 
     public Song(long id, String title, String artist, String duration, long durationLong) {
@@ -20,6 +21,15 @@ public class Song implements Serializable {
         this.duration = duration;
         this.durationLong = durationLong;
         this.portada = portada;
+    }
+
+    public Song(long id, String title, String artist, String duration, long durationLong, String nameList) {
+        this.id = id;
+        this.title = title;
+        this.artist = artist;
+        this.duration = duration;
+        this.durationLong = durationLong;
+        this.nameList = nameList;
     }
 
     public long getId() {
@@ -40,6 +50,14 @@ public class Song implements Serializable {
 
     public long getDurationLong() {
         return durationLong;
+    }
+
+    public String getNameList() {
+        return nameList;
+    }
+
+    public void setNameList(String nameList) {
+        this.nameList = nameList;
     }
 
     public Uri getPortada() {
