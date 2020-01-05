@@ -1,7 +1,11 @@
 package com.joanmanera.reproductormusica.Models;
 
 
+import android.graphics.Bitmap;
+import android.net.Uri;
+
 import java.io.Serializable;
+import java.net.URI;
 
 public class Song implements Serializable {
     private long id;
@@ -9,23 +13,15 @@ public class Song implements Serializable {
     private String artist;
     private String duration;
     private long durationLong;
-    private String nameList;
+    private long image;
 
-    public Song(long id, String title, String artist, String duration, long durationLong) {
+    public Song(long id, String title, String artist, String duration, long durationLong, long image) {
         this.id = id;
         this.title = title;
         this.artist = artist;
         this.duration = duration;
         this.durationLong = durationLong;
-    }
-
-    public Song(long id, String title, String artist, String duration, long durationLong, String nameList) {
-        this.id = id;
-        this.title = title;
-        this.artist = artist;
-        this.duration = duration;
-        this.durationLong = durationLong;
-        this.nameList = nameList;
+        this.image = image;
     }
 
     public long getId() {
@@ -48,8 +44,8 @@ public class Song implements Serializable {
         return durationLong;
     }
 
-    public String getNameList() {
-        return nameList;
+    public long getImage() {
+        return image;
     }
 
     public void setId(long id) {
@@ -72,7 +68,7 @@ public class Song implements Serializable {
         this.durationLong = durationLong;
     }
 
-    public void setNameList(String nameList) {
-        this.nameList = nameList;
+    public void setImage(long image) {
+        this.image = image;
     }
 }

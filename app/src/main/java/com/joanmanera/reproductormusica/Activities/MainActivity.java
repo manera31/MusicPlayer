@@ -8,17 +8,22 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.view.View;
 import android.view.WindowManager;
@@ -26,11 +31,13 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 
+import java.io.FileDescriptor;
 import java.util.ArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -59,8 +66,8 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
     private ScheduledExecutorService schedulerSeekBar, schedulerTimeSong;
     private TextView tvNombreCancion, tvTiempoRestante, tvTiempoActual;
+    private ImageView ivImage;
     private Spinner spinner;
-
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
@@ -85,54 +92,6 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         getSongList();
 
         queueList.add(songList.get(1));
-    }
-
-    private ArrayList<Song> getSongsFromDatabase() {
-        AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper(this, "MusicPlayer", null, 1);
-        SQLiteDatabase database = admin.getWritableDatabase();
-        ArrayList<Song> songs = new ArrayList<>();
-
-        Cursor querySongs = database.rawQuery("select * from songs", null);
-
-        for (int i = 0 ; i < querySongs.getCount() ; i++) {
-            long id = querySongs.getLong(0);
-            String title = querySongs.getString(1);
-            String artist = querySongs.getString(2);
-            String durationString = querySongs.getString(3);
-            long durationLong = querySongs.getLong(4);
-            String nameList = querySongs.getString(5);
-
-            songs.add(new Song(id, title, artist, durationString, durationLong, nameList));
-        }
-
-        querySongs.close();
-        database.close();
-
-        return songs;
-    }
-
-    private void addSongToDatabase(Song song){
-        AdminSQLiteOpenHelper admin = new AdminSQLiteOpenHelper(this, "MusicPlayer", null, 1);
-        SQLiteDatabase database = admin.getWritableDatabase();
-
-        long id = song.getId();
-        String title = song.getTitle();
-        String artist = song.getArtist();
-        String durationString = song.getDuration();
-        long durationLong = song.getDurationLong();
-        String nameList = song.getNameList();
-
-        ContentValues newCamp = new ContentValues();
-        newCamp.put("id", id);
-        newCamp.put("title", title);
-        newCamp.put("artist", artist);
-        newCamp.put("durationString", durationString);
-        newCamp.put("durationLong", durationLong);
-        newCamp.put("nameList", nameList);
-
-        database.insert("songs", null, newCamp);
-
-        database.close();
     }
 
     @Override
@@ -171,6 +130,10 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         super.onStop();
     }
 
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+    }
+
 
 
     private void iniciarBotones(){
@@ -187,6 +150,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         tvTiempoActual = findViewById(R.id.tvTiempoEscuchado);
         sbProgreso = findViewById(R.id.sbProgreso);
         spinner = findViewById(R.id.spinner);
+        ivImage = findViewById(R.id.ivImage);
 
         ibShuffle.setOnClickListener(this);
         ibPrevious.setOnClickListener(this);
@@ -277,13 +241,11 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
         if(musicCursor!=null && musicCursor.moveToFirst()){
             //get columns
-            int titleColumn = musicCursor.getColumnIndex
-                    (android.provider.MediaStore.Audio.Media.TITLE);
-            int idColumn = musicCursor.getColumnIndex
-                    (android.provider.MediaStore.Audio.Media._ID);
-            int artistColumn = musicCursor.getColumnIndex
-                    (android.provider.MediaStore.Audio.Media.ARTIST);
+            int titleColumn = musicCursor.getColumnIndex(android.provider.MediaStore.Audio.Media.TITLE);
+            int idColumn = musicCursor.getColumnIndex(android.provider.MediaStore.Audio.Media._ID);
+            int artistColumn = musicCursor.getColumnIndex(android.provider.MediaStore.Audio.Media.ARTIST);
             int durationColumn = musicCursor.getColumnIndex(MediaStore.Audio.Media.DURATION);
+            int imageColumn = musicCursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID);
             //add songs to list
             do {
                 long thisId = musicCursor.getLong(idColumn);
@@ -291,6 +253,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
                 String thisArtist = musicCursor.getString(artistColumn);
                 String thisDuration = musicCursor.getString(durationColumn);
                 long thisDurationLong = musicCursor.getLong(durationColumn);
+                long thisImage = musicCursor.getLong(imageColumn);
 
                 String duration;
                 if(String.valueOf(thisDuration) != null) {
@@ -316,7 +279,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
 
 
-                songList.add(new Song(thisId, thisTitle, thisArtist, duration, thisDurationLong));
+                songList.add(new Song(thisId, thisTitle, thisArtist, duration, thisDurationLong, thisImage));
             }
 
             while (musicCursor.moveToNext());
@@ -493,6 +456,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         int posicion = musicSrv.getSongPosn();
         boolean isSongInList = false;
 
+        ivImage.setImageBitmap(getAlbumart(songList.get(posicion).getImage()));
         tvNombreCancion.setText(songList.get(posicion).getTitle());
         tvTiempoRestante.setText(songList.get(posicion).getDuration());
         for (Song s: queueList){
@@ -525,6 +489,25 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
                 tvTiempoActual.setText(milisegundosASegundosString(musicSrv.getPosn()));
             }
         }, 0, 1000, TimeUnit.MILLISECONDS);
+    }
+
+    private Bitmap getAlbumart(long imageColumn) {
+        Bitmap bm = null;
+        try
+        {
+            Uri sArtworkUri = Uri.parse("content://media/external/audio/albumart");
+            Uri uri = ContentUris.withAppendedId(sArtworkUri, imageColumn);
+
+            ParcelFileDescriptor pfd = getContentResolver().openFileDescriptor(uri, "r");
+
+            if (pfd != null)
+            {
+                FileDescriptor fd = pfd.getFileDescriptor();
+                bm = BitmapFactory.decodeFileDescriptor(fd);
+            }
+        } catch (Exception e) {
+        }
+        return bm;
     }
 
     private String milisegundosASegundosString(int milisegundos){

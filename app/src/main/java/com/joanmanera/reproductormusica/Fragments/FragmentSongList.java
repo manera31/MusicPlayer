@@ -56,7 +56,7 @@ public class FragmentSongList extends Fragment {
         });
 
         recyclerView = layout.findViewById(R.id.rvSongs);
-        songAdapter = new SongAdapter(songs);
+        songAdapter = new SongAdapter(songs, getActivity());
         songAdapter.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

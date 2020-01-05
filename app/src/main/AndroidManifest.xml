@@ -15,14 +15,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar"
         tools:ignore="GoogleAppIndexingWarning">
-        <activity android:name=".Activities.MainActivity">
+        <activity android:name=".Activities.MainActivity" android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".Activities.ActivitySongList">
+        <activity android:name=".Activities.ActivitySongList" android:configChanges="orientation|screenSize|keyboardHidden">
 
         </activity>
         <service android:name="com.joanmanera.reproductormusica.Services.MusicService" />

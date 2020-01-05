@@ -15,9 +15,10 @@ import androidx.annotation.Nullable;
 import com.joanmanera.reproductormusica.Models.SongList;
 import com.joanmanera.reproductormusica.R;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class SongListAdapter extends ArrayAdapter<String> {
+public class SongListAdapter extends ArrayAdapter<String> implements Serializable {
 
     public SongListAdapter(@NonNull Context context, ArrayList<String> songList) {
         super(context, 0, songList);

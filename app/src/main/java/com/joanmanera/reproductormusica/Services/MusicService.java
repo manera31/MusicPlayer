@@ -38,7 +38,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     public void onCreate() {
         super.onCreate();
 
-        songPosn=1;
+        songPosn=2;
         player = new MediaPlayer();
 
         rand=new Random();
