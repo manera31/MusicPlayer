@@ -15,7 +15,6 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,9 +36,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.joanmanera.reproductormusica.Adapters.SongListAdapter;
 import com.joanmanera.reproductormusica.DataBase.AdminSQLiteOpenHelper;
 import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
 import com.joanmanera.reproductormusica.Models.Song;
+import com.joanmanera.reproductormusica.Models.SongList;
 import com.joanmanera.reproductormusica.Services.MusicService;
 import com.joanmanera.reproductormusica.R;
 
@@ -56,8 +57,8 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     private SeekBar sbProgreso;
     private boolean isShuffle = false, isRepeat = false, isRepeatOne = false, isPaused = true;
 
-    private ScheduledExecutorService scheduler;
-    private TextView tvNombreCancion, tvTiempoRestante;
+    private ScheduledExecutorService schedulerSeekBar, schedulerTimeSong;
+    private TextView tvNombreCancion, tvTiempoRestante, tvTiempoActual;
     private Spinner spinner;
 
 
@@ -183,6 +184,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         ibQueueList = findViewById(R.id.ibQueueList);
         tvNombreCancion = findViewById(R.id.tvNombreCancion);
         tvTiempoRestante = findViewById(R.id.tvTiempoRestante);
+        tvTiempoActual = findViewById(R.id.tvTiempoEscuchado);
         sbProgreso = findViewById(R.id.sbProgreso);
         spinner = findViewById(R.id.spinner);
 
@@ -211,6 +213,25 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
             }
         });
+
+        ibShuffle.setBackgroundResource(R.drawable.ic_shuffle_black_24dp);
+        ibPrevious.setBackgroundResource(R.drawable.ic_skip_previous_black_24dp);
+        ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
+        ibNext.setBackgroundResource(R.drawable.ic_skip_next_black_24dp);
+        ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp);
+        ibList.setBackgroundResource(R.drawable.baseline_format_list_bulleted_24);
+        ibQueueList.setBackgroundResource(R.drawable.ic_playlist_play_black_24dp);
+        spinner.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
+
+        ArrayList<String> list = new ArrayList<>();
+        list.add("NEW");
+        list.add("lista 1");
+        list.add("lista 2");
+        list.add("lista 3");
+        list.add("lista 4");
+
+        SongListAdapter songListAdapter = new SongListAdapter(this, list);
+        spinner.setAdapter(songListAdapter);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             private boolean first = true;
             @Override
@@ -229,26 +250,6 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
             }
         });
-
-        ibShuffle.setBackgroundResource(R.drawable.ic_shuffle_black_24dp);
-        ibPrevious.setBackgroundResource(R.drawable.ic_skip_previous_black_24dp);
-        ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
-        ibNext.setBackgroundResource(R.drawable.ic_skip_next_black_24dp);
-        ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp);
-        ibList.setBackgroundResource(R.drawable.baseline_format_list_bulleted_24);
-        ibQueueList.setBackgroundResource(R.drawable.ic_playlist_play_black_24dp);
-        spinner.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
-
-        ArrayList<String> list = new ArrayList<>();
-        list.add("string1");
-        list.add("string2");
-        list.add("string3");
-        list.add("[Select one]");
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, list);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-
     }
 
     private ServiceConnection musicConnection = new ServiceConnection(){
@@ -357,8 +358,11 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
                 if(!isPaused){
                     ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
                     playbackPaused=true;
-                    if(!scheduler.isShutdown()){
-                        scheduler.shutdown();
+                    if(!schedulerSeekBar.isShutdown()){
+                        schedulerSeekBar.shutdown();
+                    }
+                    if(schedulerTimeSong != null){
+                        schedulerTimeSong.shutdown();
                     }
                     musicSrv.pausePlayer();
                     sbProgreso.setProgress(musicSrv.getPosn());
@@ -369,10 +373,10 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
                     if(playbackPaused){
                         musicSrv.go();
+
                         sbProgreso.setProgress(musicSrv.getPosn());
                         setSong();
                     } else {
-                        musicSrv.setSong(1);
                         musicSrv.playSong();
                         setSong();
 
@@ -476,9 +480,15 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     }
 
     private void setSong(){
-        if(scheduler != null){
-            scheduler.shutdown();
+        if(schedulerSeekBar != null){
+            schedulerSeekBar.shutdown();
         }
+        if(schedulerTimeSong != null){
+            schedulerTimeSong.shutdown();
+        }
+
+        ibPlayPause.setBackgroundResource(R.drawable.ic_pause_circle_outline_black_24dp);
+        isPaused = false;
 
         int posicion = musicSrv.getSongPosn();
         boolean isSongInList = false;
@@ -498,17 +508,49 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         sbProgreso.setProgress(musicSrv.getPosn());
         sbProgreso.setMax((int) songList.get(posicion).getDurationLong());
 
-        scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(new Runnable() {
+        schedulerSeekBar = Executors.newSingleThreadScheduledExecutor();
+        schedulerTimeSong = Executors.newSingleThreadScheduledExecutor();
+
+        schedulerSeekBar.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 sbProgreso.setProgress(sbProgreso.getProgress()+200);
             }
-        }, 200, 200, TimeUnit.MILLISECONDS);
+        }, 0, 200, TimeUnit.MILLISECONDS);
+
+
+        schedulerTimeSong.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                tvTiempoActual.setText(milisegundosASegundosString(musicSrv.getPosn()));
+            }
+        }, 0, 1000, TimeUnit.MILLISECONDS);
+    }
+
+    private String milisegundosASegundosString(int milisegundos){
+        String duration;
+        try {
+            Long time = Long.valueOf(milisegundos);
+            long seconds = time/1000;
+            long minutes = seconds/60;
+            seconds = seconds % 60;
+
+
+            if(seconds<10) {
+                duration = String.valueOf(minutes) + ":0" + String.valueOf(seconds);
+            } else {
+                duration = String.valueOf(minutes) + ":" + String.valueOf(seconds);
+            }
+
+        } catch(NumberFormatException e) {
+            duration = "0000";
+        }
+        return duration;
     }
 
     @Override
     public void onChangeSong() {
         setSong();
+
     }
 }

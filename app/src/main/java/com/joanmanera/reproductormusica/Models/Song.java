@@ -1,9 +1,7 @@
 package com.joanmanera.reproductormusica.Models;
 
-import android.net.Uri;
 
 import java.io.Serializable;
-import java.net.URI;
 
 public class Song implements Serializable {
     private long id;
@@ -12,7 +10,6 @@ public class Song implements Serializable {
     private String duration;
     private long durationLong;
     private String nameList;
-    private Uri portada;
 
     public Song(long id, String title, String artist, String duration, long durationLong) {
         this.id = id;
@@ -20,7 +17,6 @@ public class Song implements Serializable {
         this.artist = artist;
         this.duration = duration;
         this.durationLong = durationLong;
-        this.portada = portada;
     }
 
     public Song(long id, String title, String artist, String duration, long durationLong, String nameList) {
@@ -56,11 +52,27 @@ public class Song implements Serializable {
         return nameList;
     }
 
-    public void setNameList(String nameList) {
-        this.nameList = nameList;
+    public void setId(long id) {
+        this.id = id;
     }
 
-    public Uri getPortada() {
-        return portada;
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setArtist(String artist) {
+        this.artist = artist;
+    }
+
+    public void setDuration(String duration) {
+        this.duration = duration;
+    }
+
+    public void setDurationLong(long durationLong) {
+        this.durationLong = durationLong;
+    }
+
+    public void setNameList(String nameList) {
+        this.nameList = nameList;
     }
 }
