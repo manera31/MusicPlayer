@@ -9,14 +9,12 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentUris;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -28,7 +26,6 @@ import android.provider.MediaStore;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
 
 import java.io.FileDescriptor;
@@ -44,10 +41,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.joanmanera.reproductormusica.Adapters.SongListAdapter;
-import com.joanmanera.reproductormusica.DataBase.AdminSQLiteOpenHelper;
 import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
 import com.joanmanera.reproductormusica.Models.Song;
-import com.joanmanera.reproductormusica.Models.SongList;
 import com.joanmanera.reproductormusica.Services.MusicService;
 import com.joanmanera.reproductormusica.R;
 
@@ -67,7 +62,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     private ScheduledExecutorService schedulerSeekBar, schedulerTimeSong;
     private TextView tvNombreCancion, tvTiempoRestante, tvTiempoActual;
     private ImageView ivImage;
-    private Spinner spinner;
+    //private Spinner spinner;
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
@@ -149,7 +144,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         tvTiempoRestante = findViewById(R.id.tvTiempoRestante);
         tvTiempoActual = findViewById(R.id.tvTiempoEscuchado);
         sbProgreso = findViewById(R.id.sbProgreso);
-        spinner = findViewById(R.id.spinner);
+        //spinner = findViewById(R.id.spinner);
         ivImage = findViewById(R.id.ivImage);
 
         ibShuffle.setOnClickListener(this);
@@ -169,12 +164,12 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-
+                musicSrv.pausePlayer();
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-
+                musicSrv.go();
             }
         });
 
@@ -185,7 +180,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp);
         ibList.setBackgroundResource(R.drawable.baseline_format_list_bulleted_24);
         ibQueueList.setBackgroundResource(R.drawable.ic_playlist_play_black_24dp);
-        spinner.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
+        //spinner.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
 
         ArrayList<String> list = new ArrayList<>();
         list.add("NEW");
@@ -194,7 +189,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         list.add("lista 3");
         list.add("lista 4");
 
-        SongListAdapter songListAdapter = new SongListAdapter(this, list);
+        /*SongListAdapter songListAdapter = new SongListAdapter(this, list);
         spinner.setAdapter(songListAdapter);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             private boolean first = true;
@@ -213,7 +208,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
             public void onNothingSelected(AdapterView<?> parent) {
 
             }
-        });
+        });*/
     }
 
     private ServiceConnection musicConnection = new ServiceConnection(){
@@ -480,7 +475,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
             public void run() {
                 sbProgreso.setProgress(sbProgreso.getProgress()+200);
             }
-        }, 0, 200, TimeUnit.MILLISECONDS);
+        }, 500, 200, TimeUnit.MILLISECONDS);
 
 
         schedulerTimeSong.scheduleAtFixedRate(new Runnable() {
@@ -488,7 +483,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
             public void run() {
                 tvTiempoActual.setText(milisegundosASegundosString(musicSrv.getPosn()));
             }
-        }, 0, 1000, TimeUnit.MILLISECONDS);
+        }, 500, 1000, TimeUnit.MILLISECONDS);
     }
 
     private Bitmap getAlbumart(long imageColumn) {
@@ -534,6 +529,5 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     @Override
     public void onChangeSong() {
         setSong();
-
     }
 }

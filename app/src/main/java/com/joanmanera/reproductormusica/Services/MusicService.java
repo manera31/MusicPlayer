@@ -27,7 +27,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     private ArrayList<Song> songs;
     private int songPosn;
 
-    private boolean shuffle = false, repeatSong = false, repeatOne = false;
+    private boolean shuffle = false, repeatList = false, repeatOne = false;
     private Random rand;
 
     private IChangeSongListener listener;
@@ -38,7 +38,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     public void onCreate() {
         super.onCreate();
 
-        songPosn=2;
+        songPosn=0;
         player = new MediaPlayer();
 
         rand=new Random();
@@ -82,14 +82,12 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-        if(repeatSong){
+        if(repeatList){
             mp.reset();
-            playSong();
-            listener.onChangeSong();
+            playNext();
         } else if (repeatOne){
             mp.reset();
             playSong();
-            repeatOne = false;
             listener.onChangeSong();
         } else if(player.getCurrentPosition() > 0){
             mp.reset();
@@ -107,28 +105,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     @Override
     public void onPrepared(MediaPlayer mp) {
         mp.start();
-
-        /*Intent notIntent = new Intent(this, MainActivity.class);
-        notIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pendInt = PendingIntent.getActivity(this, 0,
-                notIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder builder = new Notification.Builder(this);
-
-            builder.setContentIntent(pendInt)
-                    .setSmallIcon(R.drawable.android_music_player_play)
-                    .setTicker(songTitle)
-                    //.setOngoing(true)
-                    .setContentTitle("Playing")
-                    .setContentText(songTitle);
-            Notification not = builder.build();
-
-            startForeground(NOTIFY_ID, not);
-        }
-        else {
-            startForeground(1, new Notification());
-        }*/
     }
 
     public void initMusicPlayer(){
@@ -218,7 +194,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     }
 
     public void repeatSong(boolean bool){
-        repeatSong = bool;
+        repeatList = bool;
     }
 
     public void repeatOne(boolean bool){

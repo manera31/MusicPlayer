@@ -60,7 +60,6 @@ public class FragmentSongList extends Fragment {
         songAdapter.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(getContext(), "Click", Toast.LENGTH_LONG).show();
                 listener.onSongSelected(recyclerView.getChildAdapterPosition(v));
             }
         });
