@@ -25,7 +25,6 @@ import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.AdapterView;
 import android.widget.ImageButton;
 
 import java.io.FileDescriptor;
@@ -36,9 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 import android.widget.ImageView;
 import android.widget.SeekBar;
-import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
 import com.joanmanera.reproductormusica.Models.Song;
@@ -52,7 +49,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     private MusicService musicSrv;
     private Intent playIntent;
 
-    private boolean appPaused =false, playbackPaused=false;
+    private boolean playbackPaused=false;
 
     private ImageButton ibShuffle, ibPrevious, ibPlayPause, ibNext, ibRepeatRepeatOne, ibAddList, ibList, ibQueueList;
     private SeekBar sbProgreso;
@@ -61,7 +58,6 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     private ScheduledExecutorService schedulerSeekBar, schedulerTimeSong;
     private TextView tvNombreCancion, tvTiempoRestante, tvTiempoActual;
     private ImageView ivImage;
-    //private Spinner spinner;
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
@@ -69,10 +65,12 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Comprobación de version para ocultar las notificaciones. También se requierre modificar el Manifest.
         if (Build.VERSION.SDK_INT > 16) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
 
+        // Solicitar permisos.
         int perm = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
         if(perm != PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 255);
@@ -84,8 +82,6 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         queueList = new ArrayList<>();
 
         getSongList();
-
-        queueList.add(songList.get(1));
     }
 
     @Override
@@ -100,34 +96,16 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
     @Override
     protected void onDestroy() {
+        // Al destruir la aplicacion paramos el servicio.
         stopService(playIntent);
         musicSrv=null;
         super.onDestroy();
     }
 
-    @Override
-    protected void onPause(){
-        super.onPause();
-        appPaused =true;
-    }
-
-    @Override
-    protected void onResume(){
-        super.onResume();
-        if(appPaused){
-            appPaused =false;
-        }
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-    }
-
+    // Este método controla que cuando se cambie la orientación no se desajuste la interfaz.
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
     }
-
 
 
     private void iniciarBotones(){
@@ -143,7 +121,6 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         tvTiempoRestante = findViewById(R.id.tvTiempoRestante);
         tvTiempoActual = findViewById(R.id.tvTiempoEscuchado);
         sbProgreso = findViewById(R.id.sbProgreso);
-        //spinner = findViewById(R.id.spinner);
         ivImage = findViewById(R.id.ivImage);
 
         ibShuffle.setOnClickListener(this);
@@ -154,20 +131,31 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         ibAddList.setOnClickListener(this);
         ibList.setOnClickListener(this);
         ibQueueList.setOnClickListener(this);
+
+        // Creación de un OnSeekBarChangeListener.
         sbProgreso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
+            // Se ejecutará cuando se haya modificado la seek bar.
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+                // Si es un cambio realizado por el usuario modifica la posición de la canción que se este reproduciendo por la de la seek bar.
                 if (fromUser)
-                musicSrv.seek(progress);
+                    musicSrv.seek(progress);
             }
 
+            // Se ejecutará cuando se empieze a modificar la seek bar.
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
+
+                // Pausa la reproducción.
                 musicSrv.pausePlayer();
             }
 
+            // Se ejecutará cuando se pare de modificar la seek bar.
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+
+                //Continua la reproducción.
                 musicSrv.go();
             }
         });
@@ -179,35 +167,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp);
         ibList.setBackgroundResource(R.drawable.baseline_format_list_bulleted_24);
         ibQueueList.setBackgroundResource(R.drawable.ic_playlist_play_black_24dp);
-        //spinner.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
 
-        ArrayList<String> list = new ArrayList<>();
-        list.add("NEW");
-        list.add("lista 1");
-        list.add("lista 2");
-        list.add("lista 3");
-        list.add("lista 4");
-
-        /*SongListAdapter songListAdapter = new SongListAdapter(this, list);
-        spinner.setAdapter(songListAdapter);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            private boolean first = true;
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if(!first){
-                    Toast.makeText(MainActivity.this, "asdasdasdasdadsas  " + position, Toast.LENGTH_LONG).show();
-                    spinner.setBackgroundResource(R.drawable.ic_playlist_add_check_black_24dp);
-                } else {
-                    first = false;
-                }
-
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });*/
     }
 
     private ServiceConnection musicConnection = new ServiceConnection(){
@@ -312,7 +272,40 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
                 break;
 
             case R.id.ibPlayPause:
-                if(!isPaused){
+
+                if(isPaused){
+                    ibPlayPause.setBackgroundResource(R.drawable.ic_pause_circle_outline_black_24dp);
+
+                    if(playbackPaused){
+                        musicSrv.go();
+
+                        sbProgreso.setProgress(musicSrv.getPosn());
+                        setSong();
+                    } else {
+                        musicSrv.playSong();
+                        setSong();
+
+                        if (playbackPaused) {
+                            playbackPaused = false;
+                        }
+                    }
+                    isPaused = false;
+
+                } else {
+                    ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
+                    playbackPaused=true;
+                    if(!schedulerSeekBar.isShutdown()){
+                        schedulerSeekBar.shutdown();
+                    }
+                    if(schedulerTimeSong != null){
+                        schedulerTimeSong.shutdown();
+                    }
+                    musicSrv.pausePlayer();
+                    sbProgreso.setProgress(musicSrv.getPosn());
+                    isPaused = true;
+                }
+
+                /*if(!isPaused){
                     ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
                     playbackPaused=true;
                     if(!schedulerSeekBar.isShutdown()){
@@ -342,25 +335,22 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
                         }
                     }
                     isPaused = false;
-                }
+                }*/
                 break;
 
             case R.id.ibRepeatRepeatOne:
                 if(isRepeat){
                     ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_one_black_24dp);
-                    musicSrv.repeatSong(false);
                     musicSrv.repeatOne(true);
                     isRepeat = false;
                     isRepeatOne = true;
                 } else if (isRepeatOne) {
                     ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp);
-                    musicSrv.repeatSong(false);
                     musicSrv.repeatOne(false);
                     isRepeat = false;
                     isRepeatOne = false;
                 } else {
                     ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp_green);
-                    musicSrv.repeatSong(true);
                     musicSrv.repeatOne(false);
                     isRepeat = true;
                     isRepeatOne = false;

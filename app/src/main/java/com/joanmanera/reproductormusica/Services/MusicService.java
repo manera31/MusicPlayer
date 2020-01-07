@@ -88,32 +88,34 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         //Prepara la tarea del player.
         player.prepareAsync();
 
-        // Utiliza el método del listener para notificar que la canción
+        // Utiliza el método del listener para notificar que se está esuchando una canción.
         listener.onChangeSong();
     }
 
 
-    // Este método se ejecutara cuando una canción se termine de reproducir.
+    // Este método se ejecutará cuando una canción se termine de reproducir.
     @Override
     public void onCompletion(MediaPlayer mp) {
         if (repeatOne){
-            // Si se ha pulsado el botón de repetir canción, resetea el MediaPlayer y ejecuta el método playSong() (no se ha cambiado la posición de la canción).
+            // Si se ha pulsado el botón de repetir canción, resetea el MediaPlayer y ejecuta el método playSong (no se ha cambiado la posición de la canción).
             mp.reset();
             playSong();
 
         } else {
-            // Si la posicion es mayor que 0
+            // Si no se ha pulsado el botón, resetea el MediaPlayer y llama al metodo playNext.
             mp.reset();
             playNext();
         }
     }
 
+    // Este método se ejecutará si ocurre un error.
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
         mp.reset();
         return false;
     }
 
+    // Este método se ejecutará cuando MediaPlayer esté lista para la reproducción.
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
     public void onPrepared(MediaPlayer mp) {
@@ -121,6 +123,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     }
 
     public void initMusicPlayer(){
+        // Indicamos como queremos tratar la gestión de energia.
         player.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
         player.setAudioStreamType(AudioManager.STREAM_MUSIC);
 
@@ -181,6 +184,8 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     public void playPrev(){
         songPosn--;
+
+        // Si la posición es menor que 0 la cambia a la última de la lista.
         if(songPosn < 0) {
             songPosn=songs.size()-1;
         }
@@ -189,22 +194,25 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     public void playNext(){
         if(shuffle){
+            // Si el modo aleatorio está activado crea un random válido.
             int newSong = songPosn;
             while(newSong==songPosn){
                 newSong=rand.nextInt(songs.size());
             }
+
+            //Iguala la posicíon con el random creado.
             songPosn=newSong;
+
         } else{
+            // Si no está activado el modo aleatorio.
             songPosn++;
+
+            // Si la posición es mayor o igual que la útlima, la cambia a la 0.
             if(songPosn >= songs.size()){
                 songPosn=0;
             }
         }
         playSong();
-    }
-
-    public void repeatSong(boolean bool){
-        repeatList = bool;
     }
 
     public void repeatOne(boolean bool){
