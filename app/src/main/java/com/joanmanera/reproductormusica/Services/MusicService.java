@@ -18,6 +18,7 @@ import androidx.annotation.RequiresApi;
 import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
 import com.joanmanera.reproductormusica.Models.Song;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -38,6 +39,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     public void onCreate() {
         super.onCreate();
 
+        // Inicia la posición de la canción a 0.
         songPosn=0;
         player = new MediaPlayer();
 
@@ -65,31 +67,42 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     }
 
     public void playSong(){
+        // Resetea el player.
         player.reset();
+
+        // Crea una variable con la canción a escuchar.
         Song playSong = songs.get(songPosn);
+
+        // Crea la Uri de la id de la canción.
         long currSong = playSong.getId();
         Uri trackUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, currSong);
 
+        // Intenta cargar la canción. Si salta una excepción IOException crea un mensaje de error y no carga la canción.
         try{
             player.setDataSource(getApplicationContext(), trackUri);
         }
-        catch(Exception e){
+        catch(IOException e){
             Log.e("MUSIC SERVICE", "Error setting data source", e);
         }
 
+        //Prepara la tarea del player.
         player.prepareAsync();
+
+        // Utiliza el método del listener para notificar que la canción
+        listener.onChangeSong();
     }
 
+
+    // Este método se ejecutara cuando una canción se termine de reproducir.
     @Override
     public void onCompletion(MediaPlayer mp) {
-        if(repeatList){
-            mp.reset();
-            playNext();
-        } else if (repeatOne){
+        if (repeatOne){
+            // Si se ha pulsado el botón de repetir canción, resetea el MediaPlayer y ejecuta el método playSong() (no se ha cambiado la posición de la canción).
             mp.reset();
             playSong();
-            listener.onChangeSong();
-        } else if(player.getCurrentPosition() > 0){
+
+        } else {
+            // Si la posicion es mayor que 0
             mp.reset();
             playNext();
         }
@@ -122,7 +135,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     public void setSong(int songIndex){
         songPosn=songIndex;
-        listener.onChangeSong();
     }
 
     public void setShuffle(){
@@ -173,7 +185,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             songPosn=songs.size()-1;
         }
         playSong();
-        listener.onChangeSong();
     }
 
     public void playNext(){
@@ -190,7 +201,6 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             }
         }
         playSong();
-        listener.onChangeSong();
     }
 
     public void repeatSong(boolean bool){

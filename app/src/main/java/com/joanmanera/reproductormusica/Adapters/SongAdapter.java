@@ -22,6 +22,7 @@ import com.joanmanera.reproductormusica.R;
 import java.io.FileDescriptor;
 import java.util.ArrayList;
 
+// Adaptador para cargar todas las canciones.
 public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder> implements View.OnClickListener {
 
     private ArrayList<Song> songs;
@@ -92,6 +93,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
             tvDuration.setText(song.getDuration());
         }
 
+        // Método StackOverflow.
         private Bitmap getAlbumart(long imageColumn) {
             Bitmap bm = null;
             try

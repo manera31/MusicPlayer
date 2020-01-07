@@ -40,7 +40,6 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.joanmanera.reproductormusica.Adapters.SongListAdapter;
 import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
 import com.joanmanera.reproductormusica.Models.Song;
 import com.joanmanera.reproductormusica.Services.MusicService;
