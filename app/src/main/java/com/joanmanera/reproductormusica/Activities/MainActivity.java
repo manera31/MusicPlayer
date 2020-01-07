@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.joanmanera.reproductormusica.Interfaces.IChangeSongListener;
 import com.joanmanera.reproductormusica.Models.Song;
@@ -49,11 +50,11 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     private MusicService musicSrv;
     private Intent playIntent;
 
-    private boolean playbackPaused=false;
+    private boolean firstPlaySong = true;
 
     private ImageButton ibShuffle, ibPrevious, ibPlayPause, ibNext, ibRepeatRepeatOne, ibAddList, ibList, ibQueueList;
     private SeekBar sbProgreso;
-    private boolean isShuffle = false, isRepeat = false, isRepeatOne = false, isPaused = true;
+    private boolean isShuffle = false, isRepeatOne = false, isPaused = true;
 
     private ScheduledExecutorService schedulerSeekBar, schedulerTimeSong;
     private TextView tvNombreCancion, tvTiempoRestante, tvTiempoActual;
@@ -187,53 +188,36 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         }
     };
 
+    // TODO Crear método para cargar canciones desde la carpeta raw.
+    // Este método carga todas las canciones que encuentre en el dispositivo.
     public void getSongList(){
 
         ContentResolver musicResolver = getContentResolver();
+
+        // Busca todos los archivos de audio del dispositivo.
         Uri musicUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+
         Cursor musicCursor = musicResolver.query(musicUri, null, null, null, null);
 
         if(musicCursor!=null && musicCursor.moveToFirst()){
-            //get columns
+            // Coge las columnas
             int titleColumn = musicCursor.getColumnIndex(android.provider.MediaStore.Audio.Media.TITLE);
             int idColumn = musicCursor.getColumnIndex(android.provider.MediaStore.Audio.Media._ID);
             int artistColumn = musicCursor.getColumnIndex(android.provider.MediaStore.Audio.Media.ARTIST);
             int durationColumn = musicCursor.getColumnIndex(MediaStore.Audio.Media.DURATION);
             int imageColumn = musicCursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID);
-            //add songs to list
+
+            // Añade las canciones al array.
             do {
                 long thisId = musicCursor.getLong(idColumn);
                 String thisTitle = musicCursor.getString(titleColumn);
                 String thisArtist = musicCursor.getString(artistColumn);
-                String thisDuration = musicCursor.getString(durationColumn);
+                String thisDuration = milisegundosASegundosString((int)musicCursor.getLong(durationColumn)) ;
                 long thisDurationLong = musicCursor.getLong(durationColumn);
                 long thisImage = musicCursor.getLong(imageColumn);
 
-                String duration;
-                if(String.valueOf(thisDuration) != null) {
-                    try {
-                        Long time = Long.valueOf(thisDuration);
-                        long seconds = time/1000;
-                        long minutes = seconds/60;
-                        seconds = seconds % 60;
 
-
-                        if(seconds<10) {
-                            duration = String.valueOf(minutes) + ":0" + String.valueOf(seconds);
-                        } else {
-                            duration = String.valueOf(minutes) + ":" + String.valueOf(seconds);
-                        }
-                    } catch(NumberFormatException e) {
-                        duration = thisDuration;
-                    }
-                } else {
-                    duration = "0";
-                }
-
-
-
-
-                songList.add(new Song(thisId, thisTitle, thisArtist, duration, thisDurationLong, thisImage));
+                songList.add(new Song(thisId, thisTitle, thisArtist, thisDuration, thisDurationLong, thisImage));
             }
 
             while (musicCursor.moveToNext());
@@ -245,188 +229,177 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
     }
 
     private void playNext(){
-        if(playbackPaused){
-            playbackPaused=false;
+        if(isPaused){
+            isPaused=false;
         }
         musicSrv.playNext();
     }
 
     private void playPrev(){
-        if(playbackPaused){
-            playbackPaused=false;
+        if(isPaused){
+            isPaused=false;
         }
         musicSrv.playPrev();
     }
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()){
-            case R.id.ibPrevious:
-                playPrev();
-                setSong();
-                break;
+        if(songList.size() > 0) {
+            switch (v.getId()) {
+                case R.id.ibPrevious:
+                    playPrev();
+                    setSong();
+                    break;
 
-            case R.id.ibNext:
-                playNext();
-                setSong();
-                break;
+                case R.id.ibNext:
+                    playNext();
+                    setSong();
+                    break;
 
-            case R.id.ibPlayPause:
+                case R.id.ibPlayPause:
+                    if (isPaused) {
+                        //Si estaba pausada la reproducción.
 
-                if(isPaused){
-                    ibPlayPause.setBackgroundResource(R.drawable.ic_pause_circle_outline_black_24dp);
+                        ibPlayPause.setBackgroundResource(R.drawable.ic_pause_circle_outline_black_24dp);
 
-                    if(playbackPaused){
-                        musicSrv.go();
+                        // Si es la primera vez que se reproduce una cancion llama a playSong o sino a go.
+                        if (firstPlaySong) {
+                            musicSrv.playSong();
+                            firstPlaySong = false;
 
-                        sbProgreso.setProgress(musicSrv.getPosn());
+                        } else {
+                            musicSrv.go();
+
+                        }
+
+                        // Modifica la interfaz.
                         setSong();
+                        isPaused = false;
+
                     } else {
-                        musicSrv.playSong();
-                        setSong();
+                        // Si la reproducción no estaba pausada.
 
-                        if (playbackPaused) {
-                            playbackPaused = false;
+                        ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
+
+                        // Apaga los executors.
+                        if (!schedulerSeekBar.isShutdown()) {
+                            schedulerSeekBar.shutdown();
+                        }
+                        if (schedulerTimeSong != null) {
+                            schedulerTimeSong.shutdown();
+                        }
+
+                        // Pausa la reproducción.
+                        musicSrv.pausePlayer();
+
+                        // Modifica el progreso de la seek bar.
+                        sbProgreso.setProgress(musicSrv.getPosn());
+                        isPaused = true;
+                    }
+
+                    break;
+
+                case R.id.ibRepeatRepeatOne:
+                    if (isRepeatOne) {
+                        ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp);
+                        musicSrv.repeatOne(false);
+                        isRepeatOne = false;
+                    } else {
+                        ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_one_black_24dp);
+                        musicSrv.repeatOne(true);
+                        isRepeatOne = true;
+                    }
+                    break;
+
+                case R.id.ibShuffle:
+                    if (isShuffle) {
+                        ibShuffle.setBackgroundResource(R.drawable.ic_shuffle_black_24dp);
+                        isShuffle = false;
+                    } else {
+                        ibShuffle.setBackgroundResource(R.drawable.ic_shuffle_black_24dp_green);
+                        isShuffle = true;
+                    }
+
+                    // Cambia el estado shuffle del reproductor.
+                    musicSrv.setShuffle();
+                    break;
+
+                case R.id.ibAddList:
+                    boolean isInList = false;
+                    int posicion = musicSrv.getSongPosn();
+                    Song s = songList.get(posicion);
+
+                    // Busca si la canción está en la lista.
+                    for (Song song : queueList) {
+                        if (s.equals(song)) {
+                            isInList = true;
                         }
                     }
-                    isPaused = false;
 
-                } else {
-                    ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
-                    playbackPaused=true;
-                    if(!schedulerSeekBar.isShutdown()){
-                        schedulerSeekBar.shutdown();
-                    }
-                    if(schedulerTimeSong != null){
-                        schedulerTimeSong.shutdown();
-                    }
-                    musicSrv.pausePlayer();
-                    sbProgreso.setProgress(musicSrv.getPosn());
-                    isPaused = true;
-                }
+                    if (!isInList) {
 
-                /*if(!isPaused){
-                    ibPlayPause.setBackgroundResource(R.drawable.ic_play_circle_outline_black_24dp);
-                    playbackPaused=true;
-                    if(!schedulerSeekBar.isShutdown()){
-                        schedulerSeekBar.shutdown();
-                    }
-                    if(schedulerTimeSong != null){
-                        schedulerTimeSong.shutdown();
-                    }
-                    musicSrv.pausePlayer();
-                    sbProgreso.setProgress(musicSrv.getPosn());
-                    isPaused = true;
-
-                } else {
-                    ibPlayPause.setBackgroundResource(R.drawable.ic_pause_circle_outline_black_24dp);
-
-                    if(playbackPaused){
-                        musicSrv.go();
-
-                        sbProgreso.setProgress(musicSrv.getPosn());
-                        setSong();
+                        // Si no está en la lista la añade.
+                        queueList.add(s);
+                        ibAddList.setBackgroundResource(R.drawable.ic_playlist_add_check_black_24dp);
                     } else {
-                        musicSrv.playSong();
-                        setSong();
 
-                        if (playbackPaused) {
-                            playbackPaused = false;
-                        }
+                        // Si está en la lista la elimina.
+                        queueList.remove(s);
+                        ibAddList.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
                     }
-                    isPaused = false;
-                }*/
-                break;
 
-            case R.id.ibRepeatRepeatOne:
-                if(isRepeat){
-                    ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_one_black_24dp);
-                    musicSrv.repeatOne(true);
-                    isRepeat = false;
-                    isRepeatOne = true;
-                } else if (isRepeatOne) {
-                    ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp);
-                    musicSrv.repeatOne(false);
-                    isRepeat = false;
-                    isRepeatOne = false;
-                } else {
-                    ibRepeatRepeatOne.setBackgroundResource(R.drawable.ic_repeat_black_24dp_green);
-                    musicSrv.repeatOne(false);
-                    isRepeat = true;
-                    isRepeatOne = false;
-                }
-                break;
+                    break;
 
-            case R.id.ibShuffle:
-                if(isShuffle){
-                    ibShuffle.setBackgroundResource(R.drawable.ic_shuffle_black_24dp);
-                    isShuffle = false;
-                } else {
-                    ibShuffle.setBackgroundResource(R.drawable.ic_shuffle_black_24dp_green);
-                    isShuffle = true;
-                }
-                musicSrv.setShuffle();
-                break;
+                case R.id.ibList:
 
-            case R.id.ibAddList:
-                boolean isInList = false;
-                int posicion = musicSrv.getSongPosn();
-                Song s = songList.get(posicion);
+                    // Crea un intent que le pasa todas las canciones y espera el resultado.
+                    Intent intentSongList = new Intent(this, ActivitySongList.class);
+                    intentSongList.putExtra("A", songList);
+                    startActivityForResult(intentSongList, 0);
+                    break;
 
-                for (Song song: queueList){
-                    if(s.equals(song)){
-                        isInList = true;
-                    }
-                }
+                case R.id.ibQueueList:
 
-                if(!isInList){
-                    queueList.add(s);
-                    ibAddList.setBackgroundResource(R.drawable.ic_playlist_add_check_black_24dp);
-                } else {
-                    queueList.remove(s);
-                    ibAddList.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
-                }
-
-                break;
-
-            case R.id.ibList:
-                Intent i = new Intent(this, ActivitySongList.class);
-                i.putExtra("A", songList);
-                startActivityForResult(i, 0);
-                break;
-
-            case R.id.ibQueueList:
-                Intent intent = new Intent(this, ActivitySongList.class);
-                intent.putExtra("A", queueList);
-                startActivityForResult(intent, 0);
-                break;
+                    // Crea un intent que le pasa todas las canciones y espera el resultado.
+                    Intent intentQueueList = new Intent(this, ActivitySongList.class);
+                    intentQueueList.putExtra("A", queueList);
+                    startActivityForResult(intentQueueList, 0);
+                    break;
+            }
+        } else {
+            Toast.makeText(this, "No se han encontrado canciones en el dispositivo.", Toast.LENGTH_LONG).show();
         }
     }
 
+    // Recibe el resultado de los intents anteriores.
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        // Si el resultado es correcto.
         if(resultCode == Activity.RESULT_OK){
             String title = data.getStringExtra("stringResult");
             ibPlayPause.setBackgroundResource(R.drawable.ic_pause_circle_outline_black_24dp);
             isPaused = false;
             Song s;
+
+            // Busca la canción entre la lista de canciones.
             for (int i = 0 ; i < songList.size() ; i++){
                 s = songList.get(i);
                 if(s.getTitle().contains(title)){
                     musicSrv.setSong(i);
                 }
             }
+
+            // Inicia el reproductor.
             musicSrv.playSong();
             setSong();
-            if (playbackPaused) {
-                playbackPaused = false;
-            }
         }
     }
 
+    // Método para modificar la interfaz según la canción que se vaya a reproducir.
     private void setSong(){
+        // Si existen los executors los apaga.
         if(schedulerSeekBar != null){
             schedulerSeekBar.shutdown();
         }
@@ -437,12 +410,16 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         ibPlayPause.setBackgroundResource(R.drawable.ic_pause_circle_outline_black_24dp);
         isPaused = false;
 
+        // Guarda la posición de la canción.
         int posicion = musicSrv.getSongPosn();
+
         boolean isSongInList = false;
 
         ivImage.setImageBitmap(getAlbumart(songList.get(posicion).getImage()));
         tvNombreCancion.setText(songList.get(posicion).getTitle());
         tvTiempoRestante.setText(songList.get(posicion).getDuration());
+
+        // Busca si la canción esta en una lista.
         for (Song s: queueList){
             if(songList.get(posicion).equals(s)){
                 ibAddList.setBackgroundResource(R.drawable.ic_playlist_add_check_black_24dp);
@@ -453,20 +430,19 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
             ibAddList.setBackgroundResource(R.drawable.ic_playlist_add_black_24dp);
         }
 
+        // Modifica el progreso y el máximo de la seek bar dependiendo de la canción.
         sbProgreso.setProgress(musicSrv.getPosn());
         sbProgreso.setMax((int) songList.get(posicion).getDurationLong());
 
+        // Crea los nuevos executors para controlar que avance la seek bar y los segundos en tiempo real de la canción.
         schedulerSeekBar = Executors.newSingleThreadScheduledExecutor();
         schedulerTimeSong = Executors.newSingleThreadScheduledExecutor();
-
         schedulerSeekBar.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 sbProgreso.setProgress(sbProgreso.getProgress()+200);
             }
         }, 500, 200, TimeUnit.MILLISECONDS);
-
-
         schedulerTimeSong.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -475,6 +451,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         }, 500, 1000, TimeUnit.MILLISECONDS);
     }
 
+    // StackOverflow
     private Bitmap getAlbumart(long imageColumn) {
         Bitmap bm = null;
         try
@@ -494,6 +471,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
         return bm;
     }
 
+    // Convierte milisegundos a un string con formato mm:ss
     private String milisegundosASegundosString(int milisegundos){
         String duration;
         try {
@@ -517,6 +495,7 @@ public class MainActivity extends Activity implements View.OnClickListener, ICha
 
     @Override
     public void onChangeSong() {
+        // Cuando se cambie una canción porque se ha terminado, se ejecutara setSong.
         setSong();
     }
 }

@@ -26,9 +26,10 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     private MediaPlayer player;
     private ArrayList<Song> songs;
+    private ArrayList<Uri> testSongs;
     private int songPosn;
 
-    private boolean shuffle = false, repeatList = false, repeatOne = false;
+    private boolean shuffle = false, repeatOne = false;
     private Random rand;
 
     private IChangeSongListener listener;
@@ -42,6 +43,8 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         // Inicia la posición de la canción a 0.
         songPosn=0;
         player = new MediaPlayer();
+
+        testSongs = new ArrayList<>();
 
         rand=new Random();
 
@@ -73,17 +76,29 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         // Crea una variable con la canción a escuchar.
         Song playSong = songs.get(songPosn);
 
-        // Crea la Uri de la id de la canción.
-        long currSong = playSong.getId();
-        Uri trackUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, currSong);
 
-        // Intenta cargar la canción. Si salta una excepción IOException crea un mensaje de error y no carga la canción.
-        try{
-            player.setDataSource(getApplicationContext(), trackUri);
+        if (playSong.getId() != -1) {
+
+            // Crea la Uri de la id de la canción.
+            long currSong = playSong.getId();
+            Uri trackUri = ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, currSong);
+
+            // Intenta cargar la canción. Si salta una excepción IOException crea un mensaje de error y no carga la canción.
+            try{
+                player.setDataSource(getApplicationContext(), trackUri);
+            }
+            catch(IOException e){
+                Log.e("MUSIC SERVICE", "Error setting data source", e);
+            }
+        } else {
+            try{
+                player.setDataSource(this, testSongs.get(songPosn));
+            }
+            catch(IOException e){
+                Log.e("MUSIC SERVICE", "Error setting data source", e);
+            }
         }
-        catch(IOException e){
-            Log.e("MUSIC SERVICE", "Error setting data source", e);
-        }
+
 
         //Prepara la tarea del player.
         player.prepareAsync();
@@ -134,6 +149,10 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     public void setList(ArrayList<Song> theSongs){
         songs=theSongs;
+    }
+
+    public void setTestSongs (ArrayList<Uri> testSongs){
+        this.testSongs = testSongs;
     }
 
     public void setSong(int songIndex){
